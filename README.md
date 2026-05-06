@@ -5,6 +5,9 @@ The A18 path now follows the working Lara-style race flow more closely: marker-i
 target file contents, stable local remap addresses, nonfatal missed-race handling, and
 longer zone-trimming retries.
 
+Credit to rooootdev's [Lara](https://github.com/rooootdev/lara) for the working
+kexploit behavior used to stabilize this fork's A18 path.
+
 Fork of `wh1te4ever/darksword-kexploit-fun` for iOS security research.
 
 Building some cool stuff utilizing kernel r/w exploit
