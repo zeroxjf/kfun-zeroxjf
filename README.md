@@ -12,16 +12,7 @@ Fork of `wh1te4ever/darksword-kexploit-fun` for iOS security research.
 
 Building some cool stuff utilizing kernel r/w exploit
 
-## Supported Devices
-All iOS/iPadOS 17.0-26.0.1 devices, except A19/M5 devices
-
-## Features
-- Escape app sandbox
-- Remotely control or force-crash userspace processes
-- Manipulate UID, GID, and sticky bits for target files
-- Disable ASLR by setting `P_DISABLE_ASLR` to `launchd's proc->p_flag`
-
-### Tweaks
+## Tweaks
 
 > All tweaks have only been tested on iOS 18.x. They may behave incorrectly
 > or crash SpringBoard on other versions.
@@ -43,3 +34,12 @@ All iOS/iPadOS 17.0-26.0.1 devices, except A19/M5 devices
   [kolbicz/DarkSword-Tweaks](https://github.com/kolbicz/DarkSword-Tweaks)
   by [@_kolbicz](https://x.com/_kolbicz).
 - **Respring** — in-app WKWebView trigger for SpringBoard restart.
+
+## Features
+- Escape app sandbox
+- Remotely control or force-crash userspace processes
+- Manipulate UID, GID, and sticky bits for target files
+- Disable ASLR by setting `P_DISABLE_ASLR` to `launchd's proc->p_flag`
+
+## Supported Devices
+All iOS/iPadOS 17.0-26.0.1 devices, except A19/M5 devices
