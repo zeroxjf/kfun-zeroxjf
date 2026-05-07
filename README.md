@@ -45,3 +45,10 @@ Building some cool stuff utilizing kernel r/w exploit
 
 ## Supported Devices
 All iOS/iPadOS 17.0–18.7.1 and 26.0–26.0.1 devices, except A19/M5 devices
+
+This app uses the native kernel stages from the DarkSword leak, not the full
+browser-delivered DarkSword chain. The kernel bugs it relies on
+(`CVE-2025-43510` and `CVE-2025-43520`) were fixed by Apple in iOS/iPadOS
+18.7.2 and 26.1, so 18.7.2+ and 26.1+ are outside this exploit window.
+The full DarkSword chain also used WebKit/dyld stages that were patched across
+other releases; those later patches do not extend this kernel-chain window.
