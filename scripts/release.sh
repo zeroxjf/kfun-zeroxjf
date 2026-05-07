@@ -7,7 +7,7 @@
 #   ./scripts/release.sh "commit message"               # commit any changes, push, build, release
 #   ./scripts/release.sh "commit message" "release notes"   # custom notes for the GH Release
 #   NOTES_FILE=NOTES.md ./scripts/release.sh "..."      # read notes from a file
-#   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to build-<shorthash>)
+#   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to release-<UTC timestamp>-<shorthash>)
 #
 # Release notes default to the commit *subject only* (first line) — so the
 # Releases page stays terse. Pass a second arg or NOTES_FILE for a richer
@@ -62,7 +62,9 @@ fi
 
 # 4. Tag + release.
 HASH=$(git rev-parse --short HEAD)
-TAG="${TAG:-build-${HASH}}"
+HEAD_SHA=$(git rev-parse HEAD)
+STAMP=$(date -u +%Y%m%d-%H%M%S)
+TAG="${TAG:-release-${STAMP}-${HASH}}"
 SUBJECT=$(git log -1 --pretty=%s)
 
 # Release notes: explicit second arg > NOTES_FILE > NOTES env > commit subject only.
@@ -78,15 +80,45 @@ ORIGIN_URL=$(git remote get-url origin)
 REPO_SLUG=$(echo "$ORIGIN_URL" \
     | sed -E 's#^(https?://[^/]+/|git@[^:]+:)##' \
     | sed -E 's#\.git$##')
+RELEASE_TITLE="kfun-zeroxjf ${TAG}"
+
+LOCAL_TAG_SHA=""
+if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+    LOCAL_TAG_SHA=$(git rev-parse "refs/tags/$TAG^{commit}")
+    if [ "$LOCAL_TAG_SHA" != "$HEAD_SHA" ]; then
+        echo "error: local tag $TAG points to $LOCAL_TAG_SHA, not HEAD $HEAD_SHA" >&2
+        exit 1
+    fi
+else
+    echo "==> tagging $TAG"
+    git tag "$TAG" "$HEAD_SHA"
+fi
+
+REMOTE_TAG_SHA=$(git ls-remote --tags origin "refs/tags/$TAG^{}" | awk '{print $1; exit}')
+if [ -z "$REMOTE_TAG_SHA" ]; then
+    REMOTE_TAG_SHA=$(git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $1; exit}')
+fi
+if [ -n "$REMOTE_TAG_SHA" ] && [ "$REMOTE_TAG_SHA" != "$HEAD_SHA" ]; then
+    echo "error: remote tag $TAG points to $REMOTE_TAG_SHA, not HEAD $HEAD_SHA" >&2
+    exit 1
+fi
+
+if [ -z "$REMOTE_TAG_SHA" ]; then
+    echo "==> pushing tag $TAG"
+    git push origin "refs/tags/$TAG"
+fi
 
 if gh release view "$TAG" --repo "$REPO_SLUG" >/dev/null 2>&1; then
     echo "==> release $TAG already exists on $REPO_SLUG; replacing IPA asset"
     gh release upload "$TAG" "$IPA" --repo "$REPO_SLUG" --clobber
+    gh release edit "$TAG" --repo "$REPO_SLUG" --title "$RELEASE_TITLE" --latest
 else
     echo "==> creating release $TAG on $REPO_SLUG"
     gh release create "$TAG" "$IPA" \
         --repo "$REPO_SLUG" \
-        --title "kfun-zeroxjf.ipa" \
+        --verify-tag \
+        --latest \
+        --title "$RELEASE_TITLE" \
         --notes "$NOTES"
 fi
 
