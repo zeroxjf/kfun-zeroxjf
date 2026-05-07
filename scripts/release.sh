@@ -7,7 +7,7 @@
 #   ./scripts/release.sh "commit message"               # commit any changes, push, build, release
 #   ./scripts/release.sh "commit message" "release notes"   # custom notes for the GH Release
 #   NOTES_FILE=NOTES.md ./scripts/release.sh "..."      # read notes from a file
-#   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to release-<UTC timestamp>-<shorthash>)
+#   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to next vX.Y.Z tag)
 #
 # Release notes default to the commit *subject only* (first line) — so the
 # Releases page stays terse. Pass a second arg or NOTES_FILE for a richer
@@ -60,11 +60,32 @@ if [ ! -f "$IPA" ]; then
     exit 1
 fi
 
+next_release_tag() {
+    latest=$(git ls-remote --tags origin 'refs/tags/v[0-9]*.[0-9]*.[0-9]*' \
+        | awk '{print $2}' \
+        | sed -E 's#refs/tags/##; s#\\^\\{\\}$##' \
+        | awk -F. '/^v[0-9]+\.[0-9]+\.[0-9]+$/ { printf "%d %d %d %s\n", substr($1, 2), $2, $3, $0 }' \
+        | sort -k1,1n -k2,2n -k3,3n \
+        | tail -1 \
+        | awk '{print $4}')
+
+    if [ -z "$latest" ]; then
+        echo "v1.0.0"
+        return
+    fi
+
+    version=${latest#v}
+    major=${version%%.*}
+    rest=${version#*.}
+    minor=${rest%%.*}
+    patch=${rest#*.}
+    echo "v${major}.${minor}.$((patch + 1))"
+}
+
 # 4. Tag + release.
 HASH=$(git rev-parse --short HEAD)
 HEAD_SHA=$(git rev-parse HEAD)
-STAMP=$(date -u +%Y%m%d-%H%M%S)
-TAG="${TAG:-release-${STAMP}-${HASH}}"
+TAG="${TAG:-$(next_release_tag)}"
 SUBJECT=$(git log -1 --pretty=%s)
 
 # Release notes: explicit second arg > NOTES_FILE > NOTES env > commit subject only.
