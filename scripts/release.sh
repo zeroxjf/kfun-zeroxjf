@@ -3,9 +3,15 @@
 # GitHub Release.
 #
 # Usage:
-#   ./scripts/release.sh                           # use working-tree state, build + push (no commit)
-#   ./scripts/release.sh "commit message"          # commit any changes, push, build, release
-#   TAG=my-tag ./scripts/release.sh "..."          # override tag (defaults to build-<shorthash>)
+#   ./scripts/release.sh                                # use working-tree state, build + push (no commit)
+#   ./scripts/release.sh "commit message"               # commit any changes, push, build, release
+#   ./scripts/release.sh "commit message" "release notes"   # custom notes for the GH Release
+#   NOTES_FILE=NOTES.md ./scripts/release.sh "..."      # read notes from a file
+#   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to build-<shorthash>)
+#
+# Release notes default to the commit *subject only* (first line) — so the
+# Releases page stays terse. Pass a second arg or NOTES_FILE for a richer
+# changelog.
 #
 # Requires: git, gh (authenticated), xcodebuild.
 
@@ -23,6 +29,7 @@ if ! gh auth status >/dev/null 2>&1; then
 fi
 
 MSG="${1:-}"
+NOTES_ARG="${2:-}"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # 1. Commit if there are changes and a message was provided.
@@ -47,7 +54,7 @@ git push origin "$BRANCH"
 
 # 3. Build the IPA.
 ./scripts/build.sh
-IPA="$PWD/build/kfun.ipa"
+IPA="$PWD/build/kfun-zeroxjf.ipa"
 if [ ! -f "$IPA" ]; then
     echo "error: $IPA not found after build" >&2
     exit 1
@@ -57,17 +64,31 @@ fi
 HASH=$(git rev-parse --short HEAD)
 TAG="${TAG:-build-${HASH}}"
 SUBJECT=$(git log -1 --pretty=%s)
-NOTES=$(git log -1 --pretty="%B")
 
-if gh release view "$TAG" >/dev/null 2>&1; then
-    echo "==> release $TAG already exists; replacing IPA asset"
-    gh release upload "$TAG" "$IPA" --clobber
+# Release notes: explicit second arg > NOTES_FILE > NOTES env > commit subject only.
+NOTES_FROM_FILE=""
+if [ -n "${NOTES_FILE:-}" ] && [ -f "${NOTES_FILE}" ]; then
+    NOTES_FROM_FILE=$(cat "${NOTES_FILE}")
+fi
+NOTES="${NOTES_ARG:-${NOTES:-${NOTES_FROM_FILE:-$SUBJECT}}}"
+
+# Pin --repo to the origin push URL so gh doesn't try to create the release
+# on the upstream parent (which it prefers by default for forks).
+ORIGIN_URL=$(git remote get-url origin)
+REPO_SLUG=$(echo "$ORIGIN_URL" \
+    | sed -E 's#^(https?://[^/]+/|git@[^:]+:)##' \
+    | sed -E 's#\.git$##')
+
+if gh release view "$TAG" --repo "$REPO_SLUG" >/dev/null 2>&1; then
+    echo "==> release $TAG already exists on $REPO_SLUG; replacing IPA asset"
+    gh release upload "$TAG" "$IPA" --repo "$REPO_SLUG" --clobber
 else
-    echo "==> creating release $TAG"
+    echo "==> creating release $TAG on $REPO_SLUG"
     gh release create "$TAG" "$IPA" \
-        --title "$TAG: $SUBJECT" \
+        --repo "$REPO_SLUG" \
+        --title "kfun-zeroxjf.ipa" \
         --notes "$NOTES"
 fi
 
 echo "==> done"
-gh release view "$TAG" | head -10
+gh release view "$TAG" --repo "$REPO_SLUG" | head -10

@@ -19,7 +19,7 @@ PROJECT="darksword-kexploit-fun.xcodeproj"
 DERIVED="$PWD/build/DerivedData"
 PRODUCT_DIR="$DERIVED/Build/Products/${CONFIG}-${SDK}"
 APP_NAME="kfun.app"
-IPA_OUT="$PWD/build/kfun.ipa"
+IPA_OUT="$PWD/build/kfun-zeroxjf.ipa"
 
 mkdir -p build
 
