@@ -7,9 +7,6 @@ guardrails for its wired-page/zone-trimming flow: marker-initialized target file
 contents, stable local remap addresses, bounded page freeing, socket-spray preflight
 checks, and controlled zone-trimming retries.
 
-Credit to rooootdev's [Lara](https://github.com/rooootdev/lara) for the working
-kexploit behavior used to stabilize this fork.
-
 Fork of `wh1te4ever/darksword-kexploit-fun` for iOS security research.
 
 Building some cool stuff utilizing kernel r/w exploit
@@ -24,8 +21,7 @@ Building some cool stuff utilizing kernel r/w exploit
   remote-call).
 - **SpringBoard Tweaks** — Disable App Library, disable icon fly-in
   animation, zero wake animation, zero backlight fade, double-tap to lock.
-  Ported from [kolbicz/DarkSword-Tweaks](https://github.com/kolbicz/DarkSword-Tweaks)
-  by [@_kolbicz](https://x.com/_kolbicz).
+  Ported from [kolbicz/DarkSword-Tweaks](https://github.com/kolbicz/DarkSword-Tweaks).
 - **Powercuff** — CPU/GPU underclock via `thermalmonitord` simulated
   thermal pressure (off / nominal / light / moderate / heavy). Lasts
   until reboot. Port of [rpetrich/Powercuff](https://github.com/rpetrich/Powercuff).
@@ -33,8 +29,7 @@ Building some cool stuff utilizing kernel r/w exploit
   the SpringBoard status bar. Optional °C/°F and network-speed display.
 - **OTA Disabler** — toggle the launchd OTA `disabled.plist` to block
   or unblock OTA update prompts. Ported from
-  [kolbicz/DarkSword-Tweaks](https://github.com/kolbicz/DarkSword-Tweaks)
-  by [@_kolbicz](https://x.com/_kolbicz).
+  [kolbicz/DarkSword-Tweaks](https://github.com/kolbicz/DarkSword-Tweaks).
 - **Respring** — in-app WKWebView trigger for SpringBoard restart.
 
 ## Features
@@ -52,3 +47,9 @@ browser-delivered DarkSword chain. The kernel bugs it relies on
 18.7.2 and 26.1, so 18.7.2+ and 26.1+ are outside this exploit window.
 The full DarkSword chain also used WebKit/dyld stages that were patched across
 other releases; those later patches do not extend this kernel-chain window.
+
+## Credits
+- [rooootdev](https://github.com/rooootdev) — Working kexploit behavior used to stabilize this fork.
+- [neonmodder123](https://github.com/neonmodder123) — Web Respring Method
+- [kolbicz](https://github.com/kolbicz) - OTA Disabler and SpringBoard tweaks
+- [rpetrich](https://github.com/rpetrich) - Powercuff
