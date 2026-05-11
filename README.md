@@ -48,7 +48,7 @@ browser-delivered DarkSword chain. The kernel bugs it relies on
 The full DarkSword chain also used WebKit/dyld stages that were patched across
 other releases; those later patches do not extend this kernel-chain window.
 
-# Credits
+## Credits
 - [rooootdev](https://github.com/rooootdev) — Working kexploit behavior used to stabilize this fork.
 - [neonmodder123](https://github.com/neonmodder123) — Web Respring Method
 - [kolbicz](https://github.com/kolbicz) - OTA Disabler and SpringBoard tweaks
