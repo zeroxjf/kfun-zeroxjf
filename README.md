@@ -21,18 +21,50 @@ Open this page on your iPhone/iPad and tap one of the buttons below.
   </a>
 </p>
 
-The **Add AltSource** button opens a chooser that adds Cyanide's repo to
-AltStore, SideStore, Feather, or whichever signer you're already using —
-no manual URL pasting. Future releases show up automatically from there.
+## Tweaks
 
-The **Download .ipa** button jumps to the latest GitHub Release if you'd
-rather sideload the IPA directly (TrollStore, Sideloadly, etc.).
+These tweaks have only been tested on iOS 18.x. Expect version drift in
+SpringBoard and related daemons to break things on other releases.
 
-Manual source URL (if you'd rather paste it yourself):
+### Status Bar
 
-```text
-https://raw.githubusercontent.com/zeroxjf/cyanide-ios/main/source.json
-```
+- **StatBar**: battery temperature and free-RAM overlay anchored to the
+  SpringBoard status bar, with optional C/F and network-speed display.
+
+### Home Screen Layout
+
+- **SBCustomizer**: dock icon count, home-screen columns/rows, and hidden icon
+  labels. Native port of the lightsaber sbcustomizer payload.
+
+### Performance
+
+- **Powercuff**: CPU/GPU underclocking through simulated `thermalmonitord`
+  pressure levels (off, nominal, light, moderate, heavy). Lasts until reboot.
+  Port of [`rpetrich/Powercuff`](https://github.com/rpetrich/Powercuff).
+
+### SpringBoard Tweaks
+
+Ported from [`kolbicz/DarkSword-Tweaks`](https://github.com/kolbicz/DarkSword-Tweaks):
+
+- **Disable App Library**: removes the App Library page past the last home screen.
+- **Disable Icon Fly-In**: skips the spring-in animation when icons appear.
+- **Zero Wake Animation**: snaps the display on instantly when waking.
+- **Zero Backlight Fade**: instant lock/unlock backlight.
+- **Double-Tap to Lock**: lock the device with a wallpaper double-tap.
+
+### System Updates
+
+- **Disable OTA Updates**: toggles the launchd OTA `disabled.plist` to block or
+  unblock update prompts. Persists across reboots.
+
+### Beta
+
+> ⚠︎ Work in progress — these may be unstable or change between builds.
+
+- **Signal Readouts**: replaces the signal-strength glyphs with live numeric
+  readouts — RSRP dBm on cellular, bar count on WiFi.
+- **Axon Lite**: groups Notification Center requests by app with a SpringBoard
+  overlay and dedups duplicates while the RemoteCall session is alive.
 
 ## Supported Targets
 
@@ -61,26 +93,6 @@ iOS/iPadOS 18.7.2 and 26.1. Later builds are outside this kernel exploit window.
 - Control or crash userspace processes from the app.
 - Change UID, GID, and sticky bits on target files.
 - Disable ASLR by setting `P_DISABLE_ASLR` in `launchd`'s `proc->p_flag`.
-
-## Tweaks
-
-These tweaks have only been tested on iOS 18.x. Expect version drift in
-SpringBoard and related daemons to break things on other releases.
-
-- **SBCustomizer**: dock icon count, home-screen columns/rows, and hidden icon
-  labels. This ports the lightsaber sbcustomizer payload to native remote-call.
-- **SpringBoard Tweaks**: disable App Library, disable icon fly-in animation,
-  zero wake animation, zero backlight fade, and double-tap to lock. Ported from
-  [`kolbicz/DarkSword-Tweaks`](https://github.com/kolbicz/DarkSword-Tweaks).
-- **Powercuff**: CPU/GPU underclocking through simulated `thermalmonitord`
-  pressure levels: off, nominal, light, moderate, and heavy. The setting lasts
-  until reboot. Port of [`rpetrich/Powercuff`](https://github.com/rpetrich/Powercuff).
-- **StatBar**: battery temperature and free-RAM overlay anchored to the
-  SpringBoard status bar, with optional C/F and network-speed display.
-- **OTA Disabler**: toggles the launchd OTA `disabled.plist` to block or
-  unblock update prompts. Ported from
-  [`kolbicz/DarkSword-Tweaks`](https://github.com/kolbicz/DarkSword-Tweaks).
-- **Respring**: in-app WKWebView trigger for restarting SpringBoard.
 
 ## Credits
 
