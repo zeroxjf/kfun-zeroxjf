@@ -1,4 +1,8 @@
-# Cyanide
+<p align="center">
+  <img src="https://raw.githubusercontent.com/zeroxjf/cyanide-ios/main/Cyanide/Assets.xcassets/AppIcon.appiconset/icon-ios-1024x1024.png" alt="Cyanide" width="160">
+</p>
+
+<h1 align="center">Cyanide</h1>
 
 **By [@zeroxjf](https://github.com/zeroxjf)** — an iOS tweak runner built on top of the DarkSword kernel r/w primitive.
 
