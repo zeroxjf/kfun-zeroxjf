@@ -30,7 +30,11 @@ static NSString * const kGroupByCategoryDefault = @"installer.groupByCategory";
     self.title = @"Installer";
     self.navigationItem.title = @"Installer";
 
-    self.groupByCategory = [[NSUserDefaults standardUserDefaults] boolForKey:kGroupByCategoryDefault];
+    NSUserDefaults *ud = [NSUserDefaults standardUserDefaults];
+    if (![ud objectForKey:kGroupByCategoryDefault]) {
+        [ud setBool:YES forKey:kGroupByCategoryDefault];
+    }
+    self.groupByCategory = [ud boolForKey:kGroupByCategoryDefault];
     self.searchText = @"";
 
     self.allPackagesSorted = [[PackageCatalog allPackages]
@@ -39,11 +43,8 @@ static NSString * const kGroupByCategoryDefault = @"installer.groupByCategory";
         }];
 
     self.tableView.rowHeight = UITableViewAutomaticDimension;
-    self.tableView.estimatedRowHeight = 76.0;
-    // Tighten the gap between the search bar / nav bar and the first row.
-    // iOS 15+ inset-grouped tables add ~22pt of "section header top padding"
-    // above section 0 by default; collapse it so the package block sits
-    // right under the search field.
+    self.tableView.estimatedRowHeight = 68.0;
+    self.tableView.sectionFooterHeight = 4.0;
     if (@available(iOS 15.0, *)) {
         self.tableView.sectionHeaderTopPadding = 0.0;
     }
@@ -347,6 +348,12 @@ static NSString * const kGroupByCategoryDefault = @"installer.groupByCategory";
         contextualActionWithStyle:UIContextualActionStyleNormal
                             title:title
                           handler:^(UIContextualAction *a, UIView *v, void (^done)(BOOL)) {
+        BOOL isInstall = (intent == PackageQueueIntentNone && !pkg.isInstalled);
+        if (NO && isInstall && pkg.settingsSection != NSIntegerMax) {
+            done(YES);
+            [self presentConfigureAlertForPackage:pkg];
+            return;
+        }
         [q toggleForPackage:pkg];
         done(YES);
     }];
@@ -356,6 +363,31 @@ static NSString * const kGroupByCategoryDefault = @"installer.groupByCategory";
     UISwipeActionsConfiguration *cfg = [UISwipeActionsConfiguration configurationWithActions:@[action]];
     cfg.performsFirstActionWithFullSwipe = YES;
     return cfg;
+}
+
+- (void)presentConfigureAlertForPackage:(Package *)pkg
+{
+    NSString *msg = [NSString stringWithFormat:
+        @"%@ has configurable options. Set them up first so the tweak applies with your preferences on the first run.",
+        pkg.name];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Customize Before Installing?"
+                                                                   message:msg
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Configure First"
+                                             style:UIAlertActionStyleDefault
+                                           handler:^(UIAlertAction *_) {
+        PackageDetailViewController *detail = [[PackageDetailViewController alloc] initWithPackage:pkg];
+        [self.navigationController pushViewController:detail animated:YES];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Install Anyway"
+                                             style:UIAlertActionStyleDefault
+                                           handler:^(UIAlertAction *_) {
+        [[PackageQueue sharedQueue] toggleForPackage:pkg];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+                                             style:UIAlertActionStyleCancel
+                                           handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 @end

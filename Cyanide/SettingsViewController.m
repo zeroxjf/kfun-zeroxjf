@@ -2143,11 +2143,14 @@ typedef NS_ENUM(NSInteger, RootSection) {
     self.title = self.detailMode ? (self.bundleTitle ?: @"Settings") : @"Settings";
     self.tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAlways;
     self.tableView.rowHeight                      = UITableViewAutomaticDimension;
-    self.tableView.estimatedRowHeight             = 60.0;
+    self.tableView.estimatedRowHeight             = 44.0;
     self.tableView.sectionHeaderHeight            = UITableViewAutomaticDimension;
-    self.tableView.estimatedSectionHeaderHeight   = 28.0;
+    self.tableView.estimatedSectionHeaderHeight   = 20.0;
     self.tableView.sectionFooterHeight            = UITableViewAutomaticDimension;
-    self.tableView.estimatedSectionFooterHeight   = 18.0;
+    self.tableView.estimatedSectionFooterHeight   = 10.0;
+    if (@available(iOS 15.0, *)) {
+        self.tableView.sectionHeaderTopPadding = 0.0;
+    }
     [self.tableView registerClass:UITableViewCell.class forCellReuseIdentifier:@"toggle"];
     [self.tableView registerClass:UITableViewCell.class forCellReuseIdentifier:@"stepper"];
     [self.tableView registerClass:UITableViewCell.class forCellReuseIdentifier:@"segmented"];
@@ -2337,6 +2340,28 @@ typedef NS_ENUM(NSInteger, RootSection) {
     return @[];
 }
 
++ (NSArray<NSDictionary<NSString *, NSString *> *> *)settingsSummaryForSection:(NSInteger)section
+{
+    NSUserDefaults *d = NSUserDefaults.standardUserDefaults;
+    NSMutableArray *out = [NSMutableArray array];
+    if (section == SectionSBC) {
+        [out addObject:@{@"title": @"Dock icons",       @"value": [@([d integerForKey:kSettingsSBCDockIcons])  stringValue]}];
+        [out addObject:@{@"title": @"Home columns",     @"value": [@([d integerForKey:kSettingsSBCCols])        stringValue]}];
+        [out addObject:@{@"title": @"Home rows",        @"value": [@([d integerForKey:kSettingsSBCRows])        stringValue]}];
+        [out addObject:@{@"title": @"Hide icon labels", @"value": [d boolForKey:kSettingsSBCHideLabels] ? @"On" : @"Off"}];
+    } else if (section == SectionStatBar) {
+        [out addObject:@{@"title": @"Celsius",          @"value": [d boolForKey:kSettingsStatBarCelsius] ? @"On" : @"Off"}];
+        [out addObject:@{@"title": @"Hide net speed",   @"value": [d boolForKey:kSettingsStatBarHideNet]  ? @"On" : @"Off"}];
+    } else if (section == SectionRSSI) {
+        [out addObject:@{@"title": @"WiFi (bar count)", @"value": [d boolForKey:kSettingsRSSIDisplayWifi] ? @"On" : @"Off"}];
+        [out addObject:@{@"title": @"Cellular (dBm)",   @"value": [d boolForKey:kSettingsRSSIDisplayCell] ? @"On" : @"Off"}];
+    } else if (section == SectionPowercuff) {
+        NSString *lvl = [d stringForKey:kSettingsPowercuffLevel] ?: @"heavy";
+        [out addObject:@{@"title": @"Level", @"value": lvl}];
+    }
+    return out;
+}
+
 - (NSArray<NSDictionary *> *)rowsForSection:(NSInteger)s
 {
     switch (s) {
@@ -2424,7 +2449,7 @@ typedef NS_ENUM(NSInteger, RootSection) {
         case RootSectionActions:        return 4;
         case RootSectionTweakBundles:   return (NSInteger)self.tweakBundleRows.count;
         case RootSectionSystemBundles:  return (NSInteger)self.systemBundleRows.count;
-        case RootSectionAbout:          return 2;
+        case RootSectionAbout:          return 3;
         case RootSectionCount:          return 0;
     }
     return 0;
@@ -2488,7 +2513,7 @@ typedef NS_ENUM(NSInteger, RootSection) {
 {
     if ([self tableView:tableView titleForFooterInSection:section].length > 0)
         return UITableViewAutomaticDimension;
-    return 10.0;
+    return 6.0;
 }
 
 #pragma mark - Icon badge
@@ -2548,9 +2573,12 @@ typedef NS_ENUM(NSInteger, RootSection) {
         cell.imageView.image = [SettingsViewController iconBadgeWithSymbol:@"at" color:UIColor.systemBlueColor size:29.0];
         cell.textLabel.text = @"Twitter";
         cell.detailTextLabel.text = @"@zeroxjf";
+    } else if (row == 1) {
+        cell.imageView.image = [SettingsViewController iconBadgeWithSymbol:@"doc.text.magnifyingglass" color:UIColor.systemGrayColor size:29.0];
+        cell.textLabel.text = @"View Log";
     } else {
         cell.imageView.image = [SettingsViewController iconBadgeWithSymbol:@"square.and.arrow.up" color:UIColor.systemGreenColor size:29.0];
-        cell.textLabel.text = @"Collect Log";
+        cell.textLabel.text = @"Share Log";
     }
     return cell;
 }
@@ -2559,6 +2587,40 @@ typedef NS_ENUM(NSInteger, RootSection) {
 {
     NSURL *url = [NSURL URLWithString:@"https://twitter.com/zeroxjf"];
     if (url) [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+}
+
+- (void)openViewLog
+{
+    NSString *logPath = log_most_recent_session_path();
+    NSString *text;
+    if (!logPath) {
+        text = @"No log yet. Run a chain at least once.";
+    } else {
+        NSError *err = nil;
+        text = [NSString stringWithContentsOfFile:logPath encoding:NSUTF8StringEncoding error:&err];
+        if (!text) text = [NSString stringWithFormat:@"Failed to read log: %@", err.localizedDescription];
+    }
+
+    UIViewController *vc = [[UIViewController alloc] init];
+    vc.title = @"Log";
+    vc.view.backgroundColor = UIColor.systemGroupedBackgroundColor;
+
+    UITextView *tv = [[UITextView alloc] init];
+    tv.translatesAutoresizingMaskIntoConstraints = NO;
+    tv.editable = NO;
+    tv.font = [UIFont monospacedSystemFontOfSize:11.0 weight:UIFontWeightRegular];
+    tv.textColor = UIColor.labelColor;
+    tv.backgroundColor = UIColor.systemGroupedBackgroundColor;
+    tv.text = text;
+    [vc.view addSubview:tv];
+    [NSLayoutConstraint activateConstraints:@[
+        [tv.topAnchor      constraintEqualToAnchor:vc.view.safeAreaLayoutGuide.topAnchor],
+        [tv.bottomAnchor   constraintEqualToAnchor:vc.view.safeAreaLayoutGuide.bottomAnchor],
+        [tv.leadingAnchor  constraintEqualToAnchor:vc.view.leadingAnchor constant:16.0],
+        [tv.trailingAnchor constraintEqualToAnchor:vc.view.trailingAnchor constant:-16.0],
+    ]];
+
+    [self.navigationController pushViewController:vc animated:YES];
 }
 
 - (void)openFeedbackEmail
@@ -2929,8 +2991,9 @@ typedef NS_ENUM(NSInteger, RootSection) {
                 return;
             }
             case RootSectionAbout:
-                if (indexPath.row == 0) [self openTwitter];
-                else                    [self openFeedbackEmail];
+                if (indexPath.row == 0)      [self openTwitter];
+                else if (indexPath.row == 1) [self openViewLog];
+                else                         [self openFeedbackEmail];
                 return;
             case RootSectionCount:
                 return;

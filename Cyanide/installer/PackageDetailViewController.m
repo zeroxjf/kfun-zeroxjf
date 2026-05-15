@@ -13,14 +13,16 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
     PackageDetailSectionWarning = 0,
     PackageDetailSectionInfo,
     PackageDetailSectionAction,
+    PackageDetailSectionSettings,
     PackageDetailSectionDescription,
     PackageDetailSectionCount,
 };
 
 @interface PackageDetailViewController ()
 @property (nonatomic, strong) Package *package;
-@property (nonatomic, copy)   NSArray<NSArray<NSString *> *> *infoRows; // [[label, value], ...]
-@property (nonatomic, copy)   NSArray<NSNumber *> *visibleSections;     // ordered PackageDetailSection values
+@property (nonatomic, copy)   NSArray<NSArray<NSString *> *> *infoRows;       // [[label, value], ...]
+@property (nonatomic, copy)   NSArray<NSNumber *> *visibleSections;            // ordered PackageDetailSection values
+@property (nonatomic, copy)   NSArray<NSDictionary<NSString *, NSString *> *> *settingsSummary;
 @end
 
 @implementation PackageDetailViewController
@@ -39,11 +41,15 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
         if (package.unstableWarning.length > 0) {
             [sections addObject:@(PackageDetailSectionWarning)];
         }
-        [sections addObject:@(PackageDetailSectionInfo)];
+        [sections addObject:@(PackageDetailSectionDescription)];
+        _settingsSummary = [SettingsViewController settingsSummaryForSection:package.settingsSection];
+        if (_settingsSummary.count > 0) {
+            [sections addObject:@(PackageDetailSectionSettings)];
+        }
         if (package.settingsSection != NSIntegerMax && !package.isInstallDisabled) {
             [sections addObject:@(PackageDetailSectionAction)];
         }
-        [sections addObject:@(PackageDetailSectionDescription)];
+        [sections addObject:@(PackageDetailSectionInfo)];
         _visibleSections = sections;
     }
     return self;
@@ -84,6 +90,7 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
 - (void)viewWillAppear:(BOOL)animated
 {
     [super viewWillAppear:animated];
+    self.settingsSummary = [SettingsViewController settingsSummaryForSection:self.package.settingsSection];
     [self.tableView reloadData];
     [self updateActionButton];
 }
@@ -99,16 +106,16 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
 
 - (UIView *)buildHeaderView
 {
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 180.0)];
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 130.0)];
     header.backgroundColor = UIColor.clearColor;
 
-    // Big icon
+    // Icon
     UIImageView *iconView = [[UIImageView alloc] init];
     iconView.translatesAutoresizingMaskIntoConstraints = NO;
     iconView.contentMode = UIViewContentModeScaleAspectFit;
     iconView.image = [UIImage systemImageNamed:self.package.symbolName];
     iconView.preferredSymbolConfiguration =
-        [UIImageSymbolConfiguration configurationWithPointSize:64.0 weight:UIImageSymbolWeightRegular];
+        [UIImageSymbolConfiguration configurationWithPointSize:48.0 weight:UIImageSymbolWeightRegular];
     iconView.tintColor = self.view.tintColor;
     [header addSubview:iconView];
 
@@ -116,7 +123,7 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
     UILabel *nameLabel = [[UILabel alloc] init];
     nameLabel.translatesAutoresizingMaskIntoConstraints = NO;
     nameLabel.text = self.package.name;
-    nameLabel.font = [UIFont systemFontOfSize:24.0 weight:UIFontWeightBold];
+    nameLabel.font = [UIFont systemFontOfSize:22.0 weight:UIFontWeightBold];
     nameLabel.textColor = UIColor.labelColor;
     nameLabel.textAlignment = NSTextAlignmentCenter;
     [header addSubview:nameLabel];
@@ -147,22 +154,22 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
     }
 
     [NSLayoutConstraint activateConstraints:@[
-        [iconView.topAnchor      constraintEqualToAnchor:header.topAnchor constant:16.0],
+        [iconView.topAnchor      constraintEqualToAnchor:header.topAnchor constant:10.0],
         [iconView.centerXAnchor  constraintEqualToAnchor:header.centerXAnchor],
-        [iconView.widthAnchor    constraintEqualToConstant:80.0],
-        [iconView.heightAnchor   constraintEqualToConstant:72.0],
+        [iconView.widthAnchor    constraintEqualToConstant:60.0],
+        [iconView.heightAnchor   constraintEqualToConstant:54.0],
 
-        [nameLabel.topAnchor     constraintEqualToAnchor:iconView.bottomAnchor constant:10.0],
-        [nameLabel.leadingAnchor constraintEqualToAnchor:header.leadingAnchor constant:16.0],
+        [nameLabel.topAnchor      constraintEqualToAnchor:iconView.bottomAnchor constant:8.0],
+        [nameLabel.leadingAnchor  constraintEqualToAnchor:header.leadingAnchor constant:16.0],
         [nameLabel.trailingAnchor constraintEqualToAnchor:header.trailingAnchor constant:-16.0],
 
-        [subLabel.topAnchor       constraintEqualToAnchor:nameLabel.bottomAnchor constant:4.0],
+        [subLabel.topAnchor       constraintEqualToAnchor:nameLabel.bottomAnchor constant:3.0],
         [subLabel.leadingAnchor   constraintEqualToAnchor:header.leadingAnchor constant:16.0],
         [subLabel.trailingAnchor  constraintEqualToAnchor:header.trailingAnchor constant:-16.0],
     ]];
     if (badge) {
         [NSLayoutConstraint activateConstraints:@[
-            [badge.topAnchor      constraintEqualToAnchor:subLabel.bottomAnchor constant:8.0],
+            [badge.topAnchor      constraintEqualToAnchor:subLabel.bottomAnchor constant:6.0],
             [badge.centerXAnchor  constraintEqualToAnchor:header.centerXAnchor],
         ]];
     }
@@ -234,12 +241,41 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
                  self.package.installDisabledReason.UTF8String);
         return;
     }
+    if (NO && !self.package.isInstalled && [self hasSettingsBundle]) {
+        [self promptConfigureBeforeInstall];
+        return;
+    }
     if (self.package.isInstalled) {
         log_user("[INSTALLER] Queued uninstall: %s\n", self.package.name.UTF8String);
     } else {
         log_user("[INSTALLER] Queued install: %s\n", self.package.name.UTF8String);
     }
     [[PackageQueue sharedQueue] toggleForPackage:self.package];
+}
+
+- (void)promptConfigureBeforeInstall
+{
+    NSString *msg = [NSString stringWithFormat:
+        @"%@ has configurable options. Set them up first so the tweak applies with your preferences on the first run.",
+        self.package.name];
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Customize Before Installing?"
+                                                                   message:msg
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Configure First"
+                                             style:UIAlertActionStyleDefault
+                                           handler:^(UIAlertAction *_) {
+        [self navigateToSettingsSection];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Install Anyway"
+                                             style:UIAlertActionStyleDefault
+                                           handler:^(UIAlertAction *_) {
+        log_user("[INSTALLER] Queued install: %s\n", self.package.name.UTF8String);
+        [[PackageQueue sharedQueue] toggleForPackage:self.package];
+    }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Cancel"
+                                             style:UIAlertActionStyleCancel
+                                           handler:nil]];
+    [self presentViewController:alert animated:YES completion:nil];
 }
 
 #pragma mark - Data source
@@ -255,6 +291,7 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
         case PackageDetailSectionWarning:     return 1;
         case PackageDetailSectionInfo:        return (NSInteger)self.infoRows.count;
         case PackageDetailSectionAction:      return 1;
+        case PackageDetailSectionSettings:    return (NSInteger)self.settingsSummary.count;
         case PackageDetailSectionDescription: return 1;
         case PackageDetailSectionCount:       return 0;
     }
@@ -267,6 +304,7 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
         case PackageDetailSectionWarning:     return nil;
         case PackageDetailSectionInfo:        return @"Information";
         case PackageDetailSectionAction:      return @"Configure";
+        case PackageDetailSectionSettings:    return @"Current Settings";
         case PackageDetailSectionDescription: return @"Description";
         case PackageDetailSectionCount:       return nil;
     }
@@ -353,6 +391,19 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
             cell.textLabel.text = self.package.longDescription;
             return cell;
         }
+        case PackageDetailSectionSettings: {
+            UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"SettingsSummaryCell"];
+            if (!cell) {
+                cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1
+                                              reuseIdentifier:@"SettingsSummaryCell"];
+                cell.selectionStyle = UITableViewCellSelectionStyleNone;
+                cell.detailTextLabel.textColor = UIColor.secondaryLabelColor;
+            }
+            NSDictionary *row = self.settingsSummary[indexPath.row];
+            cell.textLabel.text = row[@"title"];
+            cell.detailTextLabel.text = row[@"value"];
+            return cell;
+        }
         case PackageDetailSectionAction: {
             UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ActionCell"];
             if (!cell) {
@@ -380,7 +431,11 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     if ([self sectionAtIndex:indexPath.section] != PackageDetailSectionAction) return;
     if (![self hasSettingsBundle]) return;
+    [self navigateToSettingsSection];
+}
 
+- (void)navigateToSettingsSection
+{
     UITabBarController *tab = self.tabBarController;
     NSUInteger settingsIndex = NSNotFound;
     UINavigationController *settingsNav = nil;
@@ -396,7 +451,6 @@ typedef NS_ENUM(NSInteger, PackageDetailSection) {
     }
     if (settingsIndex == NSNotFound || !settingsNav) return;
 
-    // Reset Settings nav to root, then push the bundle detail for this package.
     [settingsNav popToRootViewControllerAnimated:NO];
     SettingsViewController *bundle = [[SettingsViewController alloc] initWithUnderlyingSection:self.package.settingsSection
                                                                                    bundleTitle:self.package.name];

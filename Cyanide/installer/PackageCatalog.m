@@ -177,11 +177,23 @@ static const NSInteger kSecPowercuff = 8;
 
 + (NSArray<NSString *> *)categoriesInOrder
 {
-    NSMutableArray<NSString *> *order = [NSMutableArray array];
+    NSArray<NSString *> *preferred = @[
+        @"Beta",
+        @"Home Screen Layout",
+        @"Performance",
+        @"System Updates",
+        @"SpringBoard Tweaks",
+    ];
+    NSMutableArray<NSString *> *all = [NSMutableArray array];
     for (Package *p in [self allPackages]) {
-        if (![order containsObject:p.category]) {
-            [order addObject:p.category];
-        }
+        if (![all containsObject:p.category]) [all addObject:p.category];
+    }
+    NSMutableArray<NSString *> *order = [NSMutableArray array];
+    for (NSString *cat in preferred) {
+        if ([all containsObject:cat]) [order addObject:cat];
+    }
+    for (NSString *cat in all) {
+        if (![order containsObject:cat]) [order addObject:cat];
     }
     return order;
 }

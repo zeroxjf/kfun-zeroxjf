@@ -69,4 +69,9 @@ void settings_application_did_become_active(void);
 // after customizing.
 @property (nonatomic, copy, nullable) NSString *installerReturnPackageName;
 
+// Current values for each configurable row in a settings section.
+// Each entry: @{@"title": <label string>, @"value": <current value string>}.
+// Returns empty array when the section has no configurable rows.
++ (NSArray<NSDictionary<NSString *, NSString *> *> *)settingsSummaryForSection:(NSInteger)section;
+
 @end
