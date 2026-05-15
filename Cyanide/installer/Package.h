@@ -46,6 +46,7 @@ typedef NS_ENUM(NSInteger, PackageInstallKind) {
 @property (nonatomic, copy, nullable) NSString *unstableWarning;
 
 @property (nonatomic, readonly, assign) BOOL isInstalled;
+@property (nonatomic, readonly, assign) BOOL isQueuedForApply;
 
 - (instancetype)initWithIdentifier:(NSString *)identifier
                               name:(NSString *)name
@@ -63,6 +64,7 @@ typedef NS_ENUM(NSInteger, PackageInstallKind) {
 
 - (void)install;
 - (void)uninstall;
+- (void)applyCommittedState:(BOOL)installed;
 
 @end
 

@@ -2447,7 +2447,7 @@ typedef NS_ENUM(NSInteger, RootSection) {
                                             remote_call_has_local_state());
         BOOL anyInstalledOrQueued = NO;
         for (Package *p in [PackageCatalog allPackages]) {
-            if (p.isInstalled) { anyInstalledOrQueued = YES; break; }
+            if (p.isInstalled || p.isQueuedForApply) { anyInstalledOrQueued = YES; break; }
         }
         if (!anyInstalledOrQueued) {
             anyInstalledOrQueued = [[PackageQueue sharedQueue] pendingCount] > 0;
@@ -2814,8 +2814,8 @@ typedef NS_ENUM(NSInteger, RootSection) {
                                                  handler:^(UIAlertAction *_) {
                 NSUInteger uninstalled = 0;
                 for (Package *p in [PackageCatalog allPackages]) {
-                    if (p.isInstalled) {
-                        [p uninstall];
+                    if (p.isInstalled || p.isQueuedForApply) {
+                        [p applyCommittedState:NO];
                         uninstalled++;
                     }
                 }

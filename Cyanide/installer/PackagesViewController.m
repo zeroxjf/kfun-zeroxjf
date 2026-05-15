@@ -311,4 +311,43 @@ static NSString * const kGroupByCategoryDefault = @"installer.groupByCategory";
     [self.navigationController pushViewController:detail animated:YES];
 }
 
+- (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView
+    trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    Package *pkg = [self packageAtIndexPath:indexPath];
+    PackageQueue *q = [PackageQueue sharedQueue];
+    PackageQueueIntent intent = [q intentForPackage:pkg];
+
+    NSString *title;
+    UIColor *color;
+    NSString *symbol;
+    if (intent != PackageQueueIntentNone) {
+        title  = @"Remove";
+        color  = [UIColor systemGrayColor];
+        symbol = @"xmark.circle";
+    } else if (pkg.isInstalled) {
+        title  = @"Uninstall";
+        color  = [UIColor systemRedColor];
+        symbol = @"trash";
+    } else {
+        title  = @"Queue";
+        color  = self.view.tintColor;
+        symbol = @"tray.and.arrow.down";
+    }
+
+    UIContextualAction *action = [UIContextualAction
+        contextualActionWithStyle:UIContextualActionStyleNormal
+                            title:title
+                          handler:^(UIContextualAction *a, UIView *v, void (^done)(BOOL)) {
+        [q toggleForPackage:pkg];
+        done(YES);
+    }];
+    action.backgroundColor = color;
+    action.image = [UIImage systemImageNamed:symbol];
+
+    UISwipeActionsConfiguration *cfg = [UISwipeActionsConfiguration configurationWithActions:@[action]];
+    cfg.performsFirstActionWithFullSwipe = YES;
+    return cfg;
+}
+
 @end
