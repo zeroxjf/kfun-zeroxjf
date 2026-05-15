@@ -16,6 +16,9 @@ xcuserdata/
 ## Local build artifacts produced by scripts/build.sh
 /build/
 
+## Cyanide diagnostic logs pulled from R2 (local mirror, not committed)
+/logs/
+
 ## Stray local research / orphaned Xcode dirs that should never be committed
 /22D60__iPhone15,3/
 /darksword-kexploit-fun.xcodeproj/
