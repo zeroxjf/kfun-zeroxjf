@@ -16,6 +16,10 @@ xcuserdata/
 ## Local build artifacts produced by scripts/build.sh
 /build/
 
+## Stray local research / orphaned Xcode dirs that should never be committed
+/22D60__iPhone15,3/
+/darksword-kexploit-fun.xcodeproj/
+
 ## AI-agent docs (kept local, not pushed)
 /CLAUDE.md
 /AGENTS.md
