@@ -1,12 +1,12 @@
 # Cyanide
 
-An iOS tweak runner built on top of the DarkSword kernel r/w primitive.
+**By [@zeroxjf](https://github.com/zeroxjf)** — an iOS tweak runner built on top of the DarkSword kernel r/w primitive.
 
-Fork of [`wh1te4ever/darksword-kexploit-fun`](https://github.com/wh1te4ever/darksword-kexploit-fun)
-for iOS kernel research. This app wraps the native DarkSword kernel stages in
-an Objective-C iOS app and adds a few reliability fixes for repeated local
-testing. It does not ship the browser-delivered WebKit/dyld parts of the
-original DarkSword chain.
+Cyanide is a fork of [`wh1te4ever/darksword-kexploit-fun`](https://github.com/wh1te4ever/darksword-kexploit-fun)
+for iOS kernel research. It wraps the native DarkSword kernel stages in an
+Objective-C iOS app, restructures the UI as an Installer/Settings split, and
+adds a few reliability fixes for repeated local testing. It does not ship
+the browser-delivered WebKit/dyld parts of the original DarkSword chain.
 
 ## Install
 
