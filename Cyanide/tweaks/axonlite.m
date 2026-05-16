@@ -124,8 +124,10 @@ static const uint32_t kAxonRemoteSettleUS = 5000;
 
 static AXNRequestEntry gAxonRequests[kAxonMaxRequests];
 static AXNIconCacheEntry gAxonIconCache[kAxonMaxIconCache];
+static AXNBundle gAxonBundleRoster[kAxonMaxBundles];
 static int gAxonIconCacheCount = 0;
 static int gAxonRequestCount = 0;
+static int gAxonBundleRosterCount = 0;
 static uint64_t gAxonTick = 0;
 static uint64_t gAxonCLVC = 0;
 static uint64_t gAxonCombined = 0;
@@ -142,6 +144,7 @@ static char gAxonSelectedBundle[128] = "";
 static char gAxonDisplayedBundles[kAxonMaxSegments][128];
 static int gAxonDisplayedCount = 0;
 static char gAxonSegmentSignature[1024] = "";
+static char gAxonBadgeSignature[1024] = "";
 static bool gAxonLoggedControllerMiss = false;
 static uint64_t gAxonScanCursor = 0;
 static uint64_t gAxonStructuredClass = 0;
@@ -450,6 +453,7 @@ static bool gAxonClvcCanInsert = false;
 static bool gAxonClvcCanToggleFilter = false;
 static bool gAxonClvcCanReveal = false;
 static bool gAxonClvcCanListView = false;
+static bool gAxonCombinedProbedOnce = false;
 static bool gAxonCombinedCanForceReveal = false;
 static bool gAxonCombinedCanOverrideStyle = false;
 static uint64_t gAxonDisplayStyleAssertion = 0;
@@ -457,25 +461,26 @@ static bool gAxonListInsetApplied = false;
 
 static void axn_probe_controller_methods(uint64_t clvc, uint64_t combined)
 {
-    if (gAxonControllerProbedOnce) return;
-    if (!r_is_objc_ptr(clvc)) return;
-    gAxonControllerProbedOnce = true;
-
-    gAxonClvcCanRemove        = r_responds_main(clvc, "removeNotificationRequest:");
-    gAxonClvcCanInsert        = r_responds_main(clvc, "insertNotificationRequest:");
-    gAxonClvcCanToggleFilter  = r_responds_main(clvc, "toggleFilteringForSectionIdentifier:shouldFilter:");
-    gAxonClvcCanReveal        = r_responds_main(clvc, "revealNotificationHistory:animated:");
-    gAxonClvcCanListView      = r_responds_main(clvc, "listView");
-
     char cls[96];
-    axn_object_class_name(clvc, cls, sizeof(cls));
-    printf("[AXONLITE] probe clvc=0x%llx class=%s remove=%d insert=%d toggleFilter=%d reveal=%d listView=%d\n",
-           (unsigned long long)clvc, cls,
-           gAxonClvcCanRemove, gAxonClvcCanInsert,
-           gAxonClvcCanToggleFilter, gAxonClvcCanReveal,
-           gAxonClvcCanListView);
+    if (!gAxonControllerProbedOnce && r_is_objc_ptr(clvc)) {
+        gAxonControllerProbedOnce = true;
 
-    if (r_is_objc_ptr(combined)) {
+        gAxonClvcCanRemove        = r_responds_main(clvc, "removeNotificationRequest:");
+        gAxonClvcCanInsert        = r_responds_main(clvc, "insertNotificationRequest:");
+        gAxonClvcCanToggleFilter  = r_responds_main(clvc, "toggleFilteringForSectionIdentifier:shouldFilter:");
+        gAxonClvcCanReveal        = r_responds_main(clvc, "revealNotificationHistory:animated:");
+        gAxonClvcCanListView      = r_responds_main(clvc, "listView");
+
+        axn_object_class_name(clvc, cls, sizeof(cls));
+        printf("[AXONLITE] probe clvc=0x%llx class=%s remove=%d insert=%d toggleFilter=%d reveal=%d listView=%d\n",
+               (unsigned long long)clvc, cls,
+               gAxonClvcCanRemove, gAxonClvcCanInsert,
+               gAxonClvcCanToggleFilter, gAxonClvcCanReveal,
+               gAxonClvcCanListView);
+    }
+
+    if (!gAxonCombinedProbedOnce && r_is_objc_ptr(combined)) {
+        gAxonCombinedProbedOnce = true;
         gAxonCombinedCanForceReveal = r_responds_main(combined, "forceNotificationHistoryRevealed:animated:");
         gAxonCombinedCanOverrideStyle = r_responds_main(combined,
             "acquireOverrideNotificationListDisplayStyleAssertionWithStyle:hideNotificationCount:reason:");
@@ -1780,6 +1785,67 @@ static int axn_build_bundles(AXNBundle *bundles, int maxBundles)
     return count;
 }
 
+static void axn_roster_note_bundles(AXNBundle *bundles, int bundleCount, uint64_t tick)
+{
+    (void)tick;
+    if (!bundles || bundleCount <= 0) return;
+    int added = 0;
+    for (int i = 0; i < bundleCount; i++) {
+        if (!bundles[i].bundle[0]) continue;
+        int idx = axn_bundle_index(gAxonBundleRoster, gAxonBundleRosterCount, bundles[i].bundle);
+        if (idx < 0) {
+            if (gAxonBundleRosterCount >= kAxonMaxBundles) continue;
+            idx = gAxonBundleRosterCount++;
+            memset(&gAxonBundleRoster[idx], 0, sizeof(gAxonBundleRoster[idx]));
+            snprintf(gAxonBundleRoster[idx].bundle, sizeof(gAxonBundleRoster[idx].bundle),
+                     "%s", bundles[i].bundle);
+            added++;
+        }
+        snprintf(gAxonBundleRoster[idx].title, sizeof(gAxonBundleRoster[idx].title),
+                 "%s", bundles[i].title[0] ? bundles[i].title : bundles[i].bundle);
+        if (bundles[i].count > 0) gAxonBundleRoster[idx].count = bundles[i].count;
+    }
+    if (added > 0) {
+        printf("[AXONLITE] bundle roster learned %d app(s), total=%d\n",
+               added, gAxonBundleRosterCount);
+    }
+}
+
+static int axn_build_display_bundles(AXNBundle *bundles, int maxBundles, uint64_t tick)
+{
+    if (!bundles || maxBundles <= 0) return 0;
+
+    AXNBundle live[kAxonMaxBundles];
+    int liveCount = axn_build_bundles(live, kAxonMaxBundles);
+    axn_roster_note_bundles(live, liveCount, tick);
+
+    memset(bundles, 0, sizeof(AXNBundle) * (size_t)maxBundles);
+    int count = 0;
+    for (int i = 0; i < gAxonBundleRosterCount && count < maxBundles; i++) {
+        if (!gAxonBundleRoster[i].bundle[0]) continue;
+        AXNBundle merged = gAxonBundleRoster[i];
+        int liveIdx = axn_bundle_index(live, liveCount, merged.bundle);
+        if (liveIdx >= 0) {
+            merged.count = live[liveIdx].count;
+            if (live[liveIdx].title[0]) {
+                snprintf(merged.title, sizeof(merged.title), "%s", live[liveIdx].title);
+            }
+            gAxonBundleRoster[i] = merged;
+        }
+        bundles[count++] = merged;
+    }
+
+    for (int i = 0; i < liveCount && count < maxBundles; i++) {
+        if (axn_bundle_index(bundles, count, live[i].bundle) >= 0) continue;
+        bundles[count++] = live[i];
+    }
+
+    if (liveCount > 0 && count > liveCount && (tick <= 3 || (tick % 60) == 0)) {
+        printf("[AXONLITE] display bundles live=%d roster=%d\n", liveCount, count);
+    }
+    return count;
+}
+
 static void axn_trim_title(const char *in, char *out, size_t outLen)
 {
     if (!out || outLen == 0) return;
@@ -2214,10 +2280,12 @@ static void axn_rebuild_badges(AXNBundle *bundles, int bundleCount)
             r_msg2_main(layer, "setMasksToBounds:", 1, 0, 0, 0);
         }
         r_msg2_main(container, "addSubview:", label, 0, 0, 0);
+        axn_release_remote_obj(label);
     }
 
     r_msg2_main(gAxonWindow, "addSubview:", container, 0, 0, 0);
     gAxonBadgeView = container;
+    axn_release_remote_obj(container);
 }
 
 static void axn_cleanup_legacy_window(void)
@@ -2251,6 +2319,7 @@ static bool axn_ensure_window(uint64_t clvc)
     }
 
     if (r_is_objc_ptr(gAxonWindow) && gAxonHostView == host) {
+        r_msg2_main(gAxonWindow, "setHidden:", 0, 0, 0, 0);
         r_msg2_main(host, "bringSubviewToFront:", gAxonWindow, 0, 0, 0);
         return true;
     }
@@ -2262,6 +2331,7 @@ static bool axn_ensure_window(uint64_t clvc)
         gAxonControlCanSelect = false;
         gAxonBadgeView = 0;
         gAxonSegmentSignature[0] = '\0';
+        gAxonBadgeSignature[0] = '\0';
     }
 
     bool created = false;
@@ -2281,8 +2351,10 @@ static bool axn_ensure_window(uint64_t clvc)
         if (r_is_objc_ptr(clear)) r_msg2_main(container, "setBackgroundColor:", clear, 0, 0, 0);
 
         r_msg2_main(host, "addSubview:", container, 0, 0, 0);
+        axn_release_remote_obj(container);
         created = true;
     } else {
+        r_msg2_main(container, "setHidden:", 0, 0, 0, 0);
         r_msg2_main(container, "setUserInteractionEnabled:", 1, 0, 0, 0);
     }
 
@@ -2325,8 +2397,20 @@ static bool axn_segment_signature(AXNBundle *bundles, int bundleCount, char *out
     for (int i = 0; i < bundleCount; i++) {
         char part[300];
         int hasIcon = r_is_objc_ptr(axn_lookup_cached_icon(bundles[i].bundle)) ? 1 : 0;
-        snprintf(part, sizeof(part), "|%s:%d:%s:i%d",
-                 bundles[i].bundle, bundles[i].count, bundles[i].title, hasIcon);
+        snprintf(part, sizeof(part), "|%s:%s:i%d",
+                 bundles[i].bundle, bundles[i].title, hasIcon);
+        strlcat(out, part, outLen);
+    }
+    return true;
+}
+
+static bool axn_badge_signature(AXNBundle *bundles, int bundleCount, char *out, size_t outLen)
+{
+    if (!out || outLen == 0) return false;
+    out[0] = '\0';
+    for (int i = 0; i < bundleCount; i++) {
+        char part[180];
+        snprintf(part, sizeof(part), "|%s:%d", bundles[i].bundle, bundles[i].count);
         strlcat(out, part, outLen);
     }
     return true;
@@ -2337,9 +2421,22 @@ static bool axn_update_overlay(uint64_t clvc, AXNBundle *bundles, int bundleCoun
     if (!axn_ensure_window(clvc)) return false;
 
     if (bundleCount > kAxonMaxBundles) bundleCount = kAxonMaxBundles;
+    if (bundleCount <= 0 &&
+        r_is_objc_ptr(gAxonControl) &&
+        gAxonDisplayedCount > 1 &&
+        gAxonSegmentSignature[0] != '\0') {
+        if (gAxonTick <= 3 || (gAxonTick % 60) == 0) {
+            printf("[AXONLITE] preserving icon strip while visible request cache is empty displayed=%d\n",
+                   gAxonDisplayedCount - 1);
+        }
+        axn_layout_window(gAxonDisplayedCount - 1);
+        return true;
+    }
 
     char signature[sizeof(gAxonSegmentSignature)];
     axn_segment_signature(bundles, bundleCount, signature, sizeof(signature));
+    char badgeSignature[sizeof(gAxonBadgeSignature)];
+    axn_badge_signature(bundles, bundleCount, badgeSignature, sizeof(badgeSignature));
 
     if (gAxonSelectedBundle[0]) {
         bool found = false;
@@ -2367,8 +2464,10 @@ static bool axn_update_overlay(uint64_t clvc, AXNBundle *bundles, int bundleCoun
         r_msg2_main(gAxonWindow, "addSubview:", strip, 0, 0, 0);
         gAxonControl = strip;
         gAxonControlCanSelect = true;
+        axn_release_remote_obj(strip);
         axn_rebuild_badges(bundles, bundleCount);
         snprintf(gAxonSegmentSignature, sizeof(gAxonSegmentSignature), "%s", signature);
+        snprintf(gAxonBadgeSignature, sizeof(gAxonBadgeSignature), "%s", badgeSignature);
 
         memset(gAxonDisplayedBundles, 0, sizeof(gAxonDisplayedBundles));
         gAxonDisplayedCount = bundleCount + 1;
@@ -2378,6 +2477,12 @@ static bool axn_update_overlay(uint64_t clvc, AXNBundle *bundles, int bundleCoun
         }
 
         printf("[AXONLITE] icon strip rebuilt bundles=%d\n", bundleCount);
+    } else if (strcmp(badgeSignature, gAxonBadgeSignature) != 0) {
+        axn_rebuild_badges(bundles, bundleCount);
+        snprintf(gAxonBadgeSignature, sizeof(gAxonBadgeSignature), "%s", badgeSignature);
+        if (gAxonTick <= 3 || (gAxonTick % 60) == 0) {
+            printf("[AXONLITE] badge counts refreshed bundles=%d\n", bundleCount);
+        }
     }
 
     axn_layout_window(bundleCount);
@@ -2516,6 +2621,7 @@ static void axn_push_nc_header_down(uint64_t listModel)
         axn_object_class_name(header, cls, sizeof(cls));
         printf("[AXONLITE] NC header located header=0x%llx class=%s\n",
                (unsigned long long)header, cls);
+        r_msg2_main(header, "retain", 0, 0, 0, 0);
         gAxonNCHeader = header;
     }
     if (gAxonNCHeaderTransformed) return;
@@ -2802,15 +2908,20 @@ bool axonlite_apply_in_session(void)
 
         AXN_TAG("apply tick=%llu cache_visible_requests", (unsigned long long)gAxonTick);
         axn_cache_visible_requests(clvc, gAxonTick);
-        AXN_TAG("apply tick=%llu expand_coalesced_groups", (unsigned long long)gAxonTick);
-        axn_expand_coalesced_groups(gAxonListModel);
-        AXN_TAG("apply tick=%llu push_nc_header_down", (unsigned long long)gAxonTick);
-        axn_push_nc_header_down(gAxonListModel);
+        bool structuralTick = gAxonTick <= 2 || (gAxonTick % 12) == 0;
+        if (structuralTick) {
+            AXN_TAG("apply tick=%llu expand_coalesced_groups", (unsigned long long)gAxonTick);
+            axn_expand_coalesced_groups(gAxonListModel);
+        }
+        if (!gAxonNCHeaderTransformed || structuralTick) {
+            AXN_TAG("apply tick=%llu push_nc_header_down", (unsigned long long)gAxonTick);
+            axn_push_nc_header_down(gAxonListModel);
+        }
     }
 
     AXN_TAG("apply tick=%llu build_bundles", (unsigned long long)gAxonTick);
     AXNBundle bundles[kAxonMaxBundles];
-    int bundleCount = axn_build_bundles(bundles, kAxonMaxBundles);
+    int bundleCount = axn_build_display_bundles(bundles, kAxonMaxBundles, gAxonTick);
     AXN_TAG("apply tick=%llu hydrate_pending_icons n=%d", (unsigned long long)gAxonTick, bundleCount);
     axn_hydrate_pending_icons(bundles, bundleCount, gAxonTick);
     AXN_TAG("apply tick=%llu update_overlay", (unsigned long long)gAxonTick);
@@ -2894,7 +3005,7 @@ bool axonlite_stop_in_session(void)
         gAxonDisplayStyleAssertion = 0;
     }
 
-    if (r_is_objc_ptr(gAxonWindow)) r_msg2_main(gAxonWindow, "setHidden:", 1, 0, 0, 0);
+    if (r_is_objc_ptr(gAxonWindow)) r_msg2_main(gAxonWindow, "removeFromSuperview", 0, 0, 0, 0);
     for (int i = 0; i < gAxonRequestCount; i++) {
         if (gAxonRequests[i].retained) axn_release_remote_obj(gAxonRequests[i].request);
     }
@@ -2919,6 +3030,7 @@ bool axonlite_stop_in_session(void)
                         identity, sizeof(identity),
                         NULL, 0, NULL, 0, NULL, 0);
     }
+    axn_release_remote_obj(gAxonNCHeader);
     gAxonNCHeader = 0;
     gAxonNCHeaderTransformed = false;
     gAxonListInsetApplied = false;
@@ -2939,11 +3051,15 @@ bool axonlite_stop_in_session(void)
     gAxonClvcCanListView = false;
     gAxonCombinedCanForceReveal = false;
     gAxonCombinedCanOverrideStyle = false;
+    gAxonCombinedProbedOnce = false;
     gAxonControl = 0;
     gAxonControlCanSelect = false;
     gAxonWindow = 0;
+    gAxonHostView = 0;
+    gAxonBadgeView = 0;
     gAxonDisplayedCount = 0;
     gAxonSegmentSignature[0] = '\0';
+    gAxonBadgeSignature[0] = '\0';
     gAxonLoggedControllerMiss = false;
     printf("[AXONLITE] stopped clvc=0x%llx toggled=%d reinserted=%d shown=%d\n",
            clvc, toggled, reinserted, shown);
@@ -2981,6 +3097,7 @@ void axonlite_forget_remote_state(void)
     gAxonDisplayedCount = 0;
     gAxonSelectedBundle[0] = '\0';
     gAxonSegmentSignature[0] = '\0';
+    gAxonBadgeSignature[0] = '\0';
     gAxonLoggedControllerMiss = false;
     gAxonControllerProbedOnce = false;
     gAxonClvcCanRemove = false;
@@ -2990,6 +3107,7 @@ void axonlite_forget_remote_state(void)
     gAxonClvcCanListView = false;
     gAxonCombinedCanForceReveal = false;
     gAxonCombinedCanOverrideStyle = false;
+    gAxonCombinedProbedOnce = false;
     gAxonDisplayStyleAssertion = 0;
     gAxonLastAppliedFilter[0] = '\0';
     gAxonFilterLoggedOnce = false;

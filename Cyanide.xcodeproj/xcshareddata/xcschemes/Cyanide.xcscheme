@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       buildArchitectures = "Automatic">
+      <PostActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Install Cyanide on the selected iOS device"
+               scriptText = "if [ &quot;${PLATFORM_NAME:-}&quot; = &quot;iphoneos&quot; ] &amp;&amp; [ -n &quot;${TARGET_DEVICE_IDENTIFIER:-}&quot; ] &amp;&amp; [ -d &quot;${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}&quot; ]; then&#10;  echo &quot;[Cyanide scheme] installing ${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME} to ${TARGET_DEVICE_IDENTIFIER}&quot;&#10;  /usr/bin/xcrun devicectl device install app --device &quot;${TARGET_DEVICE_IDENTIFIER}&quot; &quot;${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}&quot;&#10;fi&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "AAA297762F72D439000B5902"
+                     BuildableName = "Cyanide.app"
+                     BlueprintName = "Cyanide"
+                     ReferencedContainer = "container:Cyanide.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PostActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -31,9 +49,9 @@
       shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
-      selectedDebuggerIdentifier = ""
-      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"

@@ -13,10 +13,11 @@
 #   VERSION=1.5.3 ./scripts/release.sh "..."            # set an explicit version
 #   TAG=v1.2.3 ./scripts/release.sh "..."               # override tag (defaults to v${VERSION})
 #
-# The release script owns versioning end-to-end: it edits MARKETING_VERSION in
-# the xcodeproj, commits the bump (along with any other working-tree changes),
-# pushes, builds, and tags. The compiled CFBundleShortVersionString, the IPA
-# filename, and the GitHub release tag all flow from the bumped version.
+# The release script owns versioning end-to-end: it edits MARKETING_VERSION and
+# CURRENT_PROJECT_VERSION in the xcodeproj, commits the bump (along with any
+# other working-tree changes), pushes, builds, and tags. The compiled
+# CFBundleShortVersionString, CFBundleVersion, the IPA filename, and the GitHub
+# release tag all flow from the bumped version.
 #
 # Release notes default to the commit *subject only* (first line) — so the
 # Releases page stays terse. Pass a second arg or NOTES_FILE for a richer
@@ -53,6 +54,29 @@ set_marketing_version() {
     local new="$1"
     # macOS sed needs the empty-string -i argument.
     sed -i '' -E "s/MARKETING_VERSION = [0-9.]+;/MARKETING_VERSION = ${new};/g" "$PBXPROJ"
+}
+
+current_build_version() {
+    grep -m1 "CURRENT_PROJECT_VERSION" "$PBXPROJ" \
+        | sed -E 's/.*CURRENT_PROJECT_VERSION = ([0-9]+);.*/\1/'
+}
+
+set_build_version() {
+    local new="$1"
+    # macOS sed needs the empty-string -i argument.
+    sed -i '' -E "s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = ${new};/g" "$PBXPROJ"
+}
+
+build_version_for_marketing_version() {
+    local version="$1"
+    local major minor patch
+    major=$(echo "$version" | cut -d. -f1)
+    minor=$(echo "$version" | cut -d. -f2)
+    patch=$(echo "$version" | cut -d. -f3)
+    [ -z "$major" ] && major=0
+    [ -z "$minor" ] && minor=0
+    [ -z "$patch" ] && patch=0
+    echo $((major * 1000000 + minor * 1000 + patch))
 }
 
 compute_new_version() {
@@ -97,6 +121,12 @@ if [ -z "$CURRENT_VERSION" ]; then
     exit 1
 fi
 NEW_VERSION=$(compute_new_version "$CURRENT_VERSION")
+CURRENT_BUILD_VERSION=$(current_build_version)
+if [ -z "$CURRENT_BUILD_VERSION" ]; then
+    echo "error: could not parse CURRENT_PROJECT_VERSION from $PBXPROJ" >&2
+    exit 1
+fi
+NEW_BUILD_VERSION=$(build_version_for_marketing_version "$NEW_VERSION")
 
 BUMPED=0
 if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
@@ -106,21 +136,39 @@ if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
 else
     echo "==> MARKETING_VERSION unchanged at $CURRENT_VERSION"
 fi
+if [ "$NEW_BUILD_VERSION" != "$CURRENT_BUILD_VERSION" ]; then
+    echo "==> bumping CURRENT_PROJECT_VERSION: $CURRENT_BUILD_VERSION -> $NEW_BUILD_VERSION"
+    set_build_version "$NEW_BUILD_VERSION"
+    BUMPED=1
+else
+    echo "==> CURRENT_PROJECT_VERSION unchanged at $CURRENT_BUILD_VERSION"
+fi
 
-# 1. Build the IPA against the (newly bumped) MARKETING_VERSION. build.sh writes
-#    build/Cyanide-${VERSION}.ipa and refreshes a build/Cyanide.ipa symlink.
-#    We build *before* committing so the actual IPA size can be baked into
-#    source.json in the same commit.
+# 1. Build the IPA against the newly resolved MARKETING_VERSION and
+#    CURRENT_PROJECT_VERSION. build.sh writes build/Cyanide-${VERSION}.ipa and
+#    refreshes a build/Cyanide.ipa symlink. We build *before* committing so the
+#    actual IPA size can be baked into source.json in the same commit.
 ./scripts/build.sh
 
-# Read CFBundleShortVersionString from the just-built app — this drives the
-# IPA filename uploaded to the Release and the default tag.
+# Read bundle versions from the just-built app. CFBundleShortVersionString
+# drives the IPA filename and tag; CFBundleVersion must advance too so iOS/Xcode
+# never keeps a stale installed bundle around under the same internal build.
 APP_PATH="$PWD/build/DerivedData/Build/Products/Debug-iphoneos/Cyanide.app"
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Info.plist" 2>/dev/null || true)
 if [ -z "$VERSION" ]; then
     echo "error: could not read CFBundleShortVersionString from $APP_PATH/Info.plist" >&2
     exit 1
 fi
+BUILD_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Info.plist" 2>/dev/null || true)
+if [ -z "$BUILD_VERSION" ]; then
+    echo "error: could not read CFBundleVersion from $APP_PATH/Info.plist" >&2
+    exit 1
+fi
+if [ "$BUILD_VERSION" != "$NEW_BUILD_VERSION" ]; then
+    echo "error: built CFBundleVersion=$BUILD_VERSION, expected $NEW_BUILD_VERSION" >&2
+    exit 1
+fi
+echo "==> built bundle version: marketing=$VERSION build=$BUILD_VERSION"
 
 IPA="$PWD/build/Cyanide-${VERSION}.ipa"
 if [ ! -f "$IPA" ]; then

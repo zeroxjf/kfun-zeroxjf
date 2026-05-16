@@ -24,7 +24,6 @@
 		AAA297772F72D439000B5902 /* Cyanide.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cyanide.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AAA2982D2F741178000B5902 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
 		FBA008522FB522840080FFE2 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
-		FBA369042FB7774300886898 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
 		FBBF227D2FAE5E7E00AF5849 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
 		FBEF02242FAC52BF005E14B9 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
 		FBEF03482FAC52D5005E14B9 /* ChOma.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = ChOma.xcodeproj; sourceTree = "<group>"; };
@@ -77,10 +76,7 @@
 				XPF/external/ChOma/tests/kpf/main.c,
 				XPF/LICENSE.md,
 				XPF/Makefile,
-				XPF/output/ios/libxpf.dylib,
 				XPF/output/ios/xpf_test,
-				XPF/output/ios-simulator/libxpf.dylib,
-				XPF/output/macos/libxpf.dylib,
 				XPF/output/macos/xpf_test,
 				XPF/src/bad_recovery.c,
 				XPF/src/cli/main.c,
@@ -100,12 +96,10 @@
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			attributesByRelativePath = {
 				XPF/output/ios/libxpf.dylib = (CodeSignOnCopy, );
-				XPF/output/ios-simulator/libxpf.dylib = (CodeSignOnCopy, );
 			};
 			buildPhase = AAA2989D2F7418CC000B5902 /* CopyFiles */;
 			membershipExceptions = (
 				XPF/output/ios/libxpf.dylib,
-				XPF/output/ios-simulator/libxpf.dylib,
 			);
 		};
 /* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
@@ -117,7 +111,7 @@
 				AAA2978E2F72D43A000B5902 /* Exceptions for "Cyanide" folder in "Cyanide" target */,
 				AA794C7B2F853D1A001F0544 /* Exceptions for "Cyanide" folder in "Copy Files" phase from "Cyanide" target */,
 			);
-			path = Cyanide;
+			path = "Cyanide";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -185,13 +179,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		FBA369392FB7774300886898 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 		FBBF22B02FAE5E7E00AF5849 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -240,10 +227,10 @@
 			fileSystemSynchronizedGroups = (
 				AAA297792F72D439000B5902 /* Cyanide */,
 			);
-			name = Cyanide;
+			name = "Cyanide";
 			packageProductDependencies = (
 			);
-			productName = Cyanide;
+			productName = "Cyanide";
 			productReference = AAA297772F72D439000B5902 /* Cyanide.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -283,14 +270,6 @@
 					ProjectRef = FBFA38382FB68E0600B9F081 /* ChOma.xcodeproj */;
 				},
 				{
-					ProductGroup = AA794BF82F828668001F0544 /* Products */;
-					ProjectRef = AA794BC92F828668001F0544 /* ChOma.xcodeproj */;
-				},
-				{
-					ProductGroup = FBBF22B02FAE5E7E00AF5849 /* Products */;
-					ProjectRef = FBBF227D2FAE5E7E00AF5849 /* ChOma.xcodeproj */;
-				},
-				{
 					ProductGroup = FBA008852FB522840080FFE2 /* Products */;
 					ProjectRef = FBA008522FB522840080FFE2 /* ChOma.xcodeproj */;
 				},
@@ -299,12 +278,16 @@
 					ProjectRef = FBEF02242FAC52BF005E14B9 /* ChOma.xcodeproj */;
 				},
 				{
-					ProductGroup = FBA369392FB7774300886898 /* Products */;
-					ProjectRef = FBA369042FB7774300886898 /* ChOma.xcodeproj */;
+					ProductGroup = AA794BF82F828668001F0544 /* Products */;
+					ProjectRef = AA794BC92F828668001F0544 /* ChOma.xcodeproj */;
 				},
 				{
 					ProductGroup = AAA298312F741178000B5902 /* Products */;
 					ProjectRef = AAA2982D2F741178000B5902 /* ChOma.xcodeproj */;
+				},
+				{
+					ProductGroup = FBBF22B02FAE5E7E00AF5849 /* Products */;
+					ProjectRef = FBBF227D2FAE5E7E00AF5849 /* ChOma.xcodeproj */;
 				},
 				{
 					ProductGroup = AA73F7C72F7BC6CB00134C31 /* Products */;
@@ -344,7 +327,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [ \"$PLATFORM_NAME\" = iphonesimulator ]; then\n  make -C \"$SRCROOT/Cyanide/XPF\" output/ios-simulator/libxpf.dylib\nelse\n  make -C \"$SRCROOT/Cyanide/XPF\" output/ios/libxpf.dylib\nfi\n";
+			shellScript = "make -C \"$SRCROOT/Cyanide/XPF\" output/ios/libxpf.dylib\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -365,7 +348,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1000026;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 839P5NK532;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -374,7 +357,7 @@
 					"$(SRCROOT)/Cyanide/XPF/src",
 					"$(SRCROOT)/Cyanide/XPF/external/ChOma/include",
 				);
-				INFOPLIST_FILE = Cyanide/Info.plist;
+				INFOPLIST_FILE = "Cyanide/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cyanide;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -386,22 +369,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
 					"$(PROJECT_DIR)/Cyanide/XPF/output/ios",
 					"$(PROJECT_DIR)/Cyanide/XPF/output/macos",
 					"$(PROJECT_DIR)/Cyanide/XPF/external/ChOma/external/ios",
 					"$(PROJECT_DIR)/Cyanide/resident/output",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(PROJECT_DIR)/Cyanide/XPF/output/ios-simulator",
-				);
 				MARKETING_VERSION = 1.0.26;
 				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "-lxpf";
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
-				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = "XPF/output/ios-simulator/libxpf.dylib";
-				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = "XPF/output/ios/libxpf.dylib";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zeroxjf.cyanide;
 				PRODUCT_NAME = Cyanide;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -420,7 +396,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 1000026;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = 839P5NK532;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -429,7 +405,7 @@
 					"$(SRCROOT)/Cyanide/XPF/src",
 					"$(SRCROOT)/Cyanide/XPF/external/ChOma/include",
 				);
-				INFOPLIST_FILE = Cyanide/Info.plist;
+				INFOPLIST_FILE = "Cyanide/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Cyanide;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
@@ -441,22 +417,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*]" = (
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
 					"$(PROJECT_DIR)/Cyanide/XPF/output/ios",
 					"$(PROJECT_DIR)/Cyanide/XPF/output/macos",
 					"$(PROJECT_DIR)/Cyanide/XPF/external/ChOma/external/ios",
 					"$(PROJECT_DIR)/Cyanide/resident/output",
 				);
-				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]" = (
-					"$(PROJECT_DIR)/Cyanide/XPF/output/ios-simulator",
-				);
 				MARKETING_VERSION = 1.0.26;
 				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "-lxpf";
-				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
-				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphoneos*]" = "XPF/output/ios-simulator/libxpf.dylib";
-				"EXCLUDED_SOURCE_FILE_NAMES[sdk=iphonesimulator*]" = "XPF/output/ios/libxpf.dylib";
 				PRODUCT_BUNDLE_IDENTIFIER = com.zeroxjf.cyanide;
 				PRODUCT_NAME = Cyanide;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
